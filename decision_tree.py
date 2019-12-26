@@ -70,7 +70,20 @@ class DecisionTree:
         return np.array(data_below), np.array(data_above)
 
     def entropy(self, data):
-        pass
+        class_count = {}
+        entropy = 0
+        resultant_target = [self.target[int(i)] for i in data[:, 0]]
+        for i in range(len(resultant_target)):
+            if resultant_target[i] in class_count.keys():
+                class_count[resultant_target[i]] += 1
+            else:
+                class_count[resultant_target[i]] = 1
+
+        for key in class_count:
+            print(class_count[key])
+            entropy += class_count[key] / len(data)
+
+        return entropy
 
     def total_entropy(self):
         pass
