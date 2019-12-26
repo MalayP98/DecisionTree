@@ -17,7 +17,7 @@ def add_indices(data):
     return np.array(new_data)
 
 
-x = add_indices(x)
+x = add_indices(x) #Data should must have a column which stores serial number of the instances.
 
 
 def train_test_split(input, target, ratio):
@@ -57,6 +57,20 @@ class DecisionTree:
 
         return 1
 
+    def partitioning(self,data):
+        partitions = []
+        column_elements = []
+        for i in range(data.shape[1] - 1):
+            for j in data[:, i + 1]:
+                if j in column_elements:
+                    continue
+                else:
+                    column_elements.append(j)
+            partitions.append(column_elements)
+            column_elements = []
+
+        return partitions
+
     def split(self, data, column, value):
         self.data = data
         data_above = []
@@ -95,3 +109,4 @@ class DecisionTree:
 obj = DecisionTree(x, y)
 c1, c2 = obj.split(x, 2, 3)
 en = obj.entropy(x)
+g = obj.partitioning(np.array([[0,2,3,4,5],[1,2,6,7.5,4],[2,3,6,9.7,3]]))
