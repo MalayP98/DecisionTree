@@ -58,7 +58,16 @@ class DecisionTree:
         return 1
 
     def split(self, data, column, value):
-        pass
+        self.data = data
+        data_above = []
+        data_below = []
+        for i in range(len(data)):
+            if data[i, column] > value:
+                data_above.append(list(data[i]))
+            else:
+                data_below.append(list(data[i]))
+
+        return np.array(data_below), np.array(data_above)
 
     def entropy(self, data):
         pass
