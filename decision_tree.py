@@ -95,18 +95,35 @@ class DecisionTree:
 
         for key in class_count:
             print(class_count[key])
-            entropy += class_count[key] / len(data)
+            entropy += ((class_count[key] / len(data)) * -np.log2(round(class_count[key] / len(data), 5)))
 
         return entropy
 
-    def total_entropy(self):
-        pass
+    def total_entropy(self, data_below, data_above):
+        total_instances = len(data_above) + len(data_below)
+        total_entropy = (len(data_below)/total_instances * self.entropy(data_below)) + (len(data_above)/total_instances * self.entropy(data_above))
+
+        return  total_entropy
+
+    def best_partitioning(self, data, partitioning):
+        minimun_entropy = 20
+        for i in range(len(partitioning)):
+            for value in partitioning[i]:
+                data_below, data_above = self.split(data, i, value)
+                total_entropy = self.total_entropy(data_below, data_above)
+                if(total_entropy < minimun_entropy):
+                    minimun_entropy = total_entropy
+                    column = i
+                    partition_value = value
+
+        return column, partition_value
 
     def grow(self):
         pass
 
 
-obj = DecisionTree(x, y)
+obj = DecisionTree(np.array([[0,2,3,4,5],[1,2,6,7.5,4],[2,3,6,9.7,3]]), np.array([0,0,1]))
 c1, c2 = obj.split(x, 2, 3)
-en = obj.entropy(x)
+en = obj.entropy(np.array([[0,2,3,4,5],[1,2,6,7.5,4],[2,3,6,9.7,3]]))
 g = obj.partitioning(np.array([[0,2,3,4,5],[1,2,6,7.5,4],[2,3,6,9.7,3]]))
+c,v = obj.best_partitioning(np.array([[0,2,3,4,5],[1,2,6,7.5,4],[2,3,6,9.7,3]]),g)
