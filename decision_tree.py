@@ -1,9 +1,17 @@
 import numpy as np
 from sklearn import datasets
+import matplotlib.pyplot as plt
+
 
 dataset = datasets.load_iris()
 x = dataset.data
 y = dataset.target
+
+plt.scatter(x[:, 3],x[:, 2])
+plt.xlim(0,2.5)
+plt.ylim(0,7)
+plt.savefig('/home/malay/PycharmProjects/DecisionTree/graph4.png')
+plt.show()
 
 def train_test_split(input, target, ratio):
     shuffle_indices = np.random.permutation(input.shape[0])
@@ -28,6 +36,10 @@ class DecisionTree:
         self.data = np.append(self.data, target.reshape(len(self.data), 1), axis = 1)
         print(self.data)
         print(self.purity(self.data))
+        self.counter = 0
+
+    def train(self):
+        self.grow(self.data)
 
     def add_indices(self,data):
         new_data = []
@@ -44,14 +56,30 @@ class DecisionTree:
         first_class = class_in_sample[0]
         for i in class_in_sample:
             if(i != first_class):
-                return 0
+                return False
 
-        return 1
+        return True
 
-    def partitioning(self,data):
+    def find_class(self, data):
+        target = data[:, -1]
+        minimum = 0
+        class_count = {}
+        for i in target:
+            if i in class_count.keys():
+                class_count[i] += 1
+            else:
+                class_count[i] = 1
+        for i in class_count:
+            if class_count[i] > minimum:
+                minimum = class_count[i]
+
+        return 'class {}'.format(i)
+
+
+    def partitioning(self,data): #Pass data without target
         partitions = []
         column_elements = []
-        for i in range(data.shape[1] - 1):
+        for i in range(data.shape[1] - 2):
             for j in data[:, i + 1]:
                 if j in column_elements:
                     continue
@@ -66,7 +94,7 @@ class DecisionTree:
         data_above = []
         data_below = []
         for i in range(len(data)):
-            if data[i, column] > value:
+            if data[i, column+1] > value:
                 data_above.append(list(data[i]))
             else:
                 data_below.append(list(data[i]))
@@ -84,7 +112,7 @@ class DecisionTree:
                 class_count[target[i]] = 1
 
         for key in class_count:
-            entropy += ((class_count[key] / len(data)) * -np.log2(round(class_count[key] / len(data), 5)))
+            entropy += ((class_count[key] / len(data)) * -np.log2(class_count[key] / len(data)))
 
         return entropy
 
@@ -95,34 +123,66 @@ class DecisionTree:
         return  total_entropy
 
     def best_partitioning(self, data, partitioning):
-        minimun_entropy = 20
+        minimum_entropy = 100
+        l = []
         for i in range(len(partitioning)):
             for value in partitioning[i]:
-                data_below, data_above = self.split(data, i+1, int(value))
+                data_below, data_above = self.split(data, i, value)
                 if data_below.size != 0 and data_above.size != 0:
-                    print("data below is -- {}, data above is -- {}".format(data_below, data_above))
-                    print("entropy is -- {}".format(self.total_entropy(data_below, data_above)))
+                    # print("data below is -- {}, data above is -- {}".format(data_below, data_above))
+                    # print("entropy is -- {}".format(self.total_entropy(data_below, data_above)))
                     total_entropy = self.total_entropy(data_below, data_above)
+                    l.append(total_entropy)
 
-                    if(total_entropy < minimun_entropy):
-                        minimun_entropy = total_entropy
+                    if total_entropy < minimum_entropy :
+                        minimum_entropy = total_entropy
                         column = i
                         partition_value = value
+                        db = data_below
+                        da = data_above
 
-            print(minimun_entropy, column, partition_value)
+            print(minimum_entropy, column, partition_value)
+            return minimum_entropy,column, partition_value, l, db, da
 
-    def grow(self):
+    def grow(self, data):
+        if self.purity(data):
+            class_is = self.find_class(data)
+            return class_is
+        else:
+            partition = self.partitioning(data)
+            print(partition)
+            minimum_entropy, column, partition_value, l,data_below, data_above = self.best_partitioning(data, partition)
+            print(minimum_entropy, column, partition_value)
+            print(l)
+            question = 'if data of column {} > {} : '.format(column+1, value)
+            if_greater = self.grow(data_above)
+            if_smaller = self.grow(data_below)
+
+            return question
+
+    def fun(self, data):
         pass
+
 
 xT = np.array([[2,3,4,5],[2,6,7.5,4],[3,6,9.7,3]])
 yT = np.array([0,0,1])
-obj = DecisionTree(xT, yT)
-# par = obj.partitioning(np.append(xT, yT.reshape(len(xT), 1), axis = 1))
-# db,da = obj.split(np.append(xT, yT.reshape(len(xT), 1), axis = 1),1,2)
-# en = obj.entropy(np.append(xT, yT.reshape(len(xT), 1), axis = 1))
-# en2 = obj.total_entropy(db,da)
-# obj.best_partitioning(np.append(xT, yT.reshape(len(xT), 1), axis = 1), par)
+obj = DecisionTree(x[:,2:], y)
+par = obj.partitioning((obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:,2:]), 1), axis = 1)))[:,:3])
+db,da = obj.split(obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:,2:]), 1), axis = 1)),2,0.8)
+en = obj.entropy(np.append(xT, yT.reshape(len(xT), 1), axis = 1))
+en2 = obj.total_entropy(db,da)
+m,c,v,l = obj.best_partitioning(np.append(x[:,2:], y.reshape(len(x), 1), axis = 1), par)
 
+o = []
+for i in range(2):
+    for value in par[i]:
+        db, da = obj.split(obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:,2:]), 1), axis = 1)),i+1, value)
+        if db.size != 0 and da.size != 0:
+            o.append(obj.total_entropy(db, da))
+
+
+b,a = obj.grow(obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:,2:]), 1), axis = 1)))
+obj.fun([1,2,3])
 
 
 
