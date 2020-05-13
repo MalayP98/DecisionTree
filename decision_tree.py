@@ -2,9 +2,9 @@ import numpy as np
 from sklearn.datasets import load_breast_cancer, load_iris
 import matplotlib.pyplot as plt
 
-dataset = load_iris()
-x = dataset.data
-y = dataset.target
+# dataset = load_iris()
+# x = dataset.data
+# y = dataset.target
 
 plt.scatter(x[:, 3], x[:, 2])
 plt.xlim(0, 2.5)
@@ -119,8 +119,8 @@ class DecisionTree:
     def partitioning(self, data):  # Pass data without target
         partitions = []
         column_elements = []
-        for i in range(data.shape[1]-1):
-            for j in data[:, i]:
+        for i in range(data.shape[1]-2):
+            for j in data[:, i+1]:
                 if j in column_elements:
                     continue
                 else:
@@ -139,7 +139,7 @@ class DecisionTree:
         data_above = []
         data_below = []
         for i in range(len(data)):
-            if data[i, column + 1] > value:
+            if data[i, column] > value:
                 data_above.append(list(data[i]))
             else:
                 data_below.append(list(data[i]))
@@ -169,7 +169,7 @@ class DecisionTree:
         return total_entropy
 
     def best_partitioning(self, data, partitioning):
-        minimum_entropy = 100
+        minimum_entropy = 100000
         execute = 0
         l = []
         for i in range(len(partitioning)):
@@ -204,7 +204,7 @@ class DecisionTree:
     def grow(self, data):
         if self.purity(data):
             return data[0][-1]
-        if self.counter == 6:
+        if self.counter == 5:
             return self.find_class(data)
         else:
             self.counter += 1
@@ -216,13 +216,13 @@ class DecisionTree:
             else:
                 return self.find_class(data)
             print(column, partition_value)
-            question = '{} > {}'.format(column + 1, partition_value)
+            question = '{} < {}'.format(column + 1, partition_value)
             tree = {question: []}
 
             print(len(data_below), len(data_above))
 
-            if_greater = self.grow(data_above)
             if_smaller = self.grow(data_below)
+            if_greater = self.grow(data_above)
 
             if if_greater == if_smaller:
                 tree = if_greater
@@ -283,29 +283,40 @@ class DecisionTree:
 # b, a = obj.grow(obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:, 2:]), 1), axis = 1)))
 #
 
-# dataset = load_breast_cancer()
-# x = dataset.data
-# y = dataset.target
-# xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.7)
-# dt = DecisionTree(xTrain, yTrain)
-# n = dt.train()
+dataset = load_breast_cancer()
+x = dataset.data
+y = dataset.target
+x21 = list(x[:, 21])
+x26 = list(x[:, 26])
+X = []
+X.append(x21)
+X.append(x26)
+X = np.transpose(np.array(X))
+xTrain, yTrain, xTest, yTest = train_test_split(X, y, 0.7)
+dt = DecisionTree(xTrain, yTrain)
+n = dt.train()
+result = []
+for i in xTest:
+    result.append(dt.predict(i))
+c = 0
+for i in range(len(yTest)):
+    if result[i] == yTest[i]: c += 1
+
+print("Accuray is {}".format(c/len(yTest)))
+
+
+# xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.8)
+# obj = DecisionTree(xTrain, yTrain)
+# n = obj.train()
 # result = []
 # for i in xTest:
-#     result.append(dt.predict(i))
+#     result.append(obj.predict(i))
+#
 # c = 0
 # for i in range(len(yTest)):
 #     if result[i] == yTest[i]: c += 1
 #
 # print("Accuray is {}".format(c/len(yTest)))
-
-
-xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.8)
-obj = DecisionTree(xTrain, yTrain)
-n = obj.train()
-result = []
-for i in xTest:
-    result.append(obj.predict(i))
-
 
 
 
