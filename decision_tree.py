@@ -1,8 +1,8 @@
 import numpy as np
-from sklearn import datasets
+from sklearn.datasets import load_breast_cancer, load_iris
 import matplotlib.pyplot as plt
 
-dataset = datasets.load_iris()
+dataset = load_iris()
 x = dataset.data
 y = dataset.target
 
@@ -25,12 +25,35 @@ def train_test_split(input, target, ratio):
     return xTrain, yTrain, xTest, yTest
 
 
-xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.8)
+class FeatureScaling:
+    def __init__(self, data, type='Normalization'):
+        self.data = data
+        self.type = type
+
+    def Scaling(self):
+
+        if self.type == 'Normalization':
+            for i in range(0, self.data.shape[1]):
+                self.data[:, i] = (self.data[:, i] - min(self.data[:, i])) / (
+                        max(self.data[:, i]) - min(self.data[:, i]))
+            return self.data
+
+        elif self.type == 'Standardization':
+            for i in range(0, self.data.shape[1]):
+                self.data[:, i] = (self.data[:, i] - np.mean(self.data[:, i])) / (np.var(self.data[:, i]))
+            return self.data
+
+        elif self.type == 'Mean_Normalization':
+            for i in range(0, self.data.shape[1]):
+                self.data[:, i] = (self.data[:, i] - np.mean(self.data[:, i])) / (
+                        max(self.data[:, i]) - min(self.data[:, i]))
+            return self.data
 
 
 class DecisionTree:
     def __init__(self, training_data, target, impurity_measure='entropy'):
         self.data = self.add_indices(training_data)
+        self.__tree = None
         self.impurity_measure = impurity_measure
         self.target = target
         self.data = np.append(self.data, target.reshape(len(self.data), 1), axis=1)
@@ -39,7 +62,8 @@ class DecisionTree:
         self.counter = 0
 
     def train(self):
-        return self.grow(self.data)
+        self.__tree = self.grow(self.data)
+        return self.__tree
 
     @staticmethod
     def add_indices(data):
@@ -90,18 +114,23 @@ class DecisionTree:
                 minimum = class_count[i]
                 class_number = i
 
-        return 'class {}'.format(class_number)
+        return class_number
 
     def partitioning(self, data):  # Pass data without target
         partitions = []
         column_elements = []
-        for i in range(data.shape[1] - 2):
-            for j in data[:, i + 1]:
+        for i in range(data.shape[1]-1):
+            for j in data[:, i]:
                 if j in column_elements:
                     continue
                 else:
                     column_elements.append(j)
-            partitions.append(column_elements)
+            ps = []
+            for i in range(len(column_elements)):
+                if i != 0:
+                    part = column_elements[i] + column_elements[i - 1]
+                    ps.append(part / 2)
+            partitions.append(ps)
             column_elements = []
 
         return partitions
@@ -174,8 +203,7 @@ class DecisionTree:
 
     def grow(self, data):
         if self.purity(data):
-            class_is = self.find_class(data)
-            return class_is
+            return data[0][-1]
         if self.counter == 6:
             return self.find_class(data)
         else:
@@ -188,7 +216,7 @@ class DecisionTree:
             else:
                 return self.find_class(data)
             print(column, partition_value)
-            question = 'if data of column {} > {} '.format(column + 1, partition_value)
+            question = '{} > {}'.format(column + 1, partition_value)
             tree = {question: []}
 
             print(len(data_below), len(data_above))
@@ -203,6 +231,36 @@ class DecisionTree:
                 tree[question].append(if_greater)
 
             return tree
+
+    @staticmethod
+    def get_condition(str):
+        col_num = ""; op = ""; val = ""; space = 0
+        for i in str:
+            if i == " ": space += 1
+            elif space == 0:col_num += i
+            elif space == 1: op += i
+            elif space == 2: val += i
+        return int(col_num)-1, op, float(val)
+
+    def predict(self, instance):
+        dict = self.__tree
+        while(True):
+            key = list(dict.keys()).pop()
+            col_num, op, val = self.get_condition(key)
+            if op == ">":
+                if instance[col_num] > val:
+                    if type(dict[key][0]) == type({}): dict = dict[key][0]
+                    else: return dict[key][0]
+                else:
+                    if type(dict[key][1]) == type({}): dict = dict[key][1]
+                    else: return dict[key][1]
+            else:
+                if instance[col_num] < val:
+                    if type(dict[key][0]) == type({}): dict = dict[key][0]
+                    else: return dict[key][0]
+                else:
+                    if type(dict[key][1]) == type({}): dict = dict[key][1]
+                    else: return dict[key][1]
 
 #
 # xT = np.array([[2,3,4,5],[2,6,7.5,4],[3,6,9.7,3]])
@@ -224,5 +282,34 @@ class DecisionTree:
 #
 # b, a = obj.grow(obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:, 2:]), 1), axis = 1)))
 #
-obj = DecisionTree(x[:, 2:], y)
+
+# dataset = load_breast_cancer()
+# x = dataset.data
+# y = dataset.target
+# xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.7)
+# dt = DecisionTree(xTrain, yTrain)
+# n = dt.train()
+# result = []
+# for i in xTest:
+#     result.append(dt.predict(i))
+# c = 0
+# for i in range(len(yTest)):
+#     if result[i] == yTest[i]: c += 1
+#
+# print("Accuray is {}".format(c/len(yTest)))
+
+
+xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.8)
+obj = DecisionTree(xTrain, yTrain)
 n = obj.train()
+result = []
+for i in xTest:
+    result.append(obj.predict(i))
+
+
+
+
+
+
+
+
