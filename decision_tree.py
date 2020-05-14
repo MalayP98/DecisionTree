@@ -2,11 +2,11 @@ import numpy as np
 from sklearn.datasets import load_breast_cancer, load_iris
 import matplotlib.pyplot as plt
 
-# dataset = load_iris()
-# x = dataset.data
-# y = dataset.target
+dataset = load_iris()
+x = dataset.data
+y = dataset.target
 
-plt.scatter(x[:, 3], x[:, 2])
+# plt.scatter(x[:, 3], x[:, 2])
 plt.xlim(0, 2.5)
 plt.ylim(0, 7)
 plt.savefig('/home/malay/PycharmProjects/DecisionTree/graph4.png')
@@ -57,12 +57,15 @@ class DecisionTree:
         self.impurity_measure = impurity_measure
         self.target = target
         self.data = np.append(self.data, target.reshape(len(self.data), 1), axis=1)
-        print(self.data)
-        print(self.purity(self.data))
-        self.counter = 0
+        self.max_depth = 0
+        #print(self.data)
+        #print(self.purity(self.data))
+        #self.counter = 0
 
-    def train(self):
-        self.__tree = self.grow(self.data)
+    def train(self, max_depth):
+        self.max_depth = max_depth
+        data = self.data
+        self.__tree = self.grow(data, 0)
         return self.__tree
 
     @staticmethod
@@ -76,7 +79,6 @@ class DecisionTree:
         return np.array(new_data)
 
     def purity(self, data):
-        self.data = data
         class_in_sample = data[:, -1]
         first_class = class_in_sample[0]
         for i in class_in_sample:
@@ -94,8 +96,8 @@ class DecisionTree:
             else:
                 class_count[classes] = 1
 
-        print(class_count, max(class_count.values()), sum(class_count.values()))
-        print(target)
+        #print(class_count, max(class_count.values()), sum(class_count.values()))
+        #print(target)
 
         percentage = max(class_count.values()) / sum(class_count.values())
         return percentage
@@ -173,9 +175,10 @@ class DecisionTree:
         execute = 0
         l = []
         for i in range(len(partitioning)):
+            if len(partitioning[i]) == 0: continue
             for value in partitioning[i]:
-                data_below, data_above = self.split(data, i, value)
-                print('data below is {} and da is {}'.format(data_below, data_above))
+                data_below, data_above = self.split(data, i+1, value)
+                #print('data below is {} and da is {}'.format(data_below, data_above))
                 if data_below.size != 0 and data_above.size != 0:
                     execute = 1
                     # print("data below is -- {}, data above is -- {}".format(data_below, data_above))
@@ -185,7 +188,7 @@ class DecisionTree:
 
                     if total_entropy < minimum_entropy:
                         minimum_entropy = total_entropy
-                        column = i
+                        column = i+1
                         partition_value = value
                         db = data_below
                         da = data_above
@@ -201,28 +204,35 @@ class DecisionTree:
         else:
             return -1, -1
 
-    def grow(self, data):
+    def grow(self, data, counter):
+        print("grow calls ->", counter)
         if self.purity(data):
+            print("data is pure. move to next call")
             return data[0][-1]
-        if self.counter == 5:
+        if counter == self.max_depth:
             return self.find_class(data)
         else:
-            self.counter += 1
+            print(data.shape)
+            print("data is no pure and counter is less than {}".format(self.max_depth))
             partition = self.partitioning(data)
-            print(partition)
+            for i in partition:
+                print("index {} -> {}".format(partition.index(i), i))
+            #print(partition)
             column, partition_value = self.best_partitioning(data, partition)
+            print("best partition is at {} and partition value is {}".format(column, partition_value))
             if column != -1:
                 data_below, data_above = self.split(data, column, partition_value)
+                print("at this partion entropy is {}".format(self.total_entropy(data_below, data_above)))
             else:
                 return self.find_class(data)
-            print(column, partition_value)
-            question = '{} < {}'.format(column + 1, partition_value)
+            #print(column, partition_value)
+            question = '{} < {}'.format(column, partition_value)
             tree = {question: []}
 
-            print(len(data_below), len(data_above))
+            #print(len(data_below), len(data_above))
 
-            if_smaller = self.grow(data_below)
-            if_greater = self.grow(data_above)
+            if_smaller = self.grow(data_below, counter+1)
+            if_greater = self.grow(data_above, counter+1)
 
             if if_greater == if_smaller:
                 tree = if_greater
@@ -247,20 +257,12 @@ class DecisionTree:
         while(True):
             key = list(dict.keys()).pop()
             col_num, op, val = self.get_condition(key)
-            if op == ">":
-                if instance[col_num] > val:
-                    if type(dict[key][0]) == type({}): dict = dict[key][0]
-                    else: return dict[key][0]
-                else:
-                    if type(dict[key][1]) == type({}): dict = dict[key][1]
-                    else: return dict[key][1]
+            if instance[col_num] < val:
+                if type(dict[key][0]) == type({}): dict = dict[key][0]
+                else: return dict[key][0]
             else:
-                if instance[col_num] < val:
-                    if type(dict[key][0]) == type({}): dict = dict[key][0]
-                    else: return dict[key][0]
-                else:
-                    if type(dict[key][1]) == type({}): dict = dict[key][1]
-                    else: return dict[key][1]
+                if type(dict[key][1]) == type({}): dict = dict[key][1]
+                else: return dict[key][1]
 
 #
 # xT = np.array([[2,3,4,5],[2,6,7.5,4],[3,6,9.7,3]])
@@ -283,40 +285,40 @@ class DecisionTree:
 # b, a = obj.grow(obj.add_indices(np.append(x[:,2:], y.reshape(len(x[:, 2:]), 1), axis = 1)))
 #
 
-dataset = load_breast_cancer()
-x = dataset.data
-y = dataset.target
-x21 = list(x[:, 21])
-x26 = list(x[:, 26])
-X = []
-X.append(x21)
-X.append(x26)
-X = np.transpose(np.array(X))
-xTrain, yTrain, xTest, yTest = train_test_split(X, y, 0.7)
-dt = DecisionTree(xTrain, yTrain)
-n = dt.train()
-result = []
-for i in xTest:
-    result.append(dt.predict(i))
-c = 0
-for i in range(len(yTest)):
-    if result[i] == yTest[i]: c += 1
-
-print("Accuray is {}".format(c/len(yTest)))
-
-
-# xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.8)
-# obj = DecisionTree(xTrain, yTrain)
-# n = obj.train()
+# dataset = load_breast_cancer()
+# x = dataset.data
+# y = dataset.target
+# x21 = list(x[:, 21])
+# x26 = list(x[:, 26])
+# X = []
+# X.append(x21)
+# X.append(x26)
+# X = np.transpose(np.array(X))
+# xTrain, yTrain, xTest, yTest = train_test_split(X, y, 0.7)
+# dt = DecisionTree(xTrain, yTrain)
+# n = dt.train()
 # result = []
 # for i in xTest:
-#     result.append(obj.predict(i))
-#
+#     result.append(dt.predict(i))
 # c = 0
 # for i in range(len(yTest)):
 #     if result[i] == yTest[i]: c += 1
 #
 # print("Accuray is {}".format(c/len(yTest)))
+
+
+xTrain, yTrain, xTest, yTest = train_test_split(x, y, 0.8)
+obj = DecisionTree(xTrain, yTrain)
+n = obj.train(6)
+result = []
+for i in xTest:
+    result.append(obj.predict(i))
+
+c = 0
+for i in range(len(yTest)):
+    if result[i] == yTest[i]: c += 1
+
+print("Accuray is {}".format(c/len(yTest)))
 
 
 
